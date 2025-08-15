@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { RotateCcw, Home, Share, Trophy, Coins, Star, ChevronRight } from 'lucide-react-native';
+import { RotateCcw, Chrome as Home, Share, Trophy, Coins, Star, ChevronRight } from 'lucide-react-native';
 import { GameMode } from '../types/game';
 
 interface GameOverScreenProps {
