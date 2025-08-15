@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Gamepad2, Store, Target, Trophy } from 'lucide-react-native';
+import { Gamepad2, Store, Target, Trophy, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -31,7 +31,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
+      <Tabs.Screen
         name="leaderboard"
         options={{
           title: 'Leaderboard',
@@ -39,13 +39,22 @@ export default function TabLayout() {
             <Trophy size={size} color={color} />
           ),
         }}
-      /> */}
+      />
       <Tabs.Screen
         name="shop"
         options={{
           title: 'Shop',
           tabBarIcon: ({ size, color }) => (
             <Store size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ size, color }) => (
+            <Settings size={size} color={color} />
           ),
         }}
       />

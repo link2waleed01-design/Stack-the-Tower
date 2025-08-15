@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { ScoreRecord, GameState } from '../types/game';
+import { ScoreRecord, GameState, GameMode } from '../types/game';
 
 const HIGH_SCORE_KEY = '@stack_tower_high_score';
 const GAME_DATA_KEY = '@stack_tower_game_data';
 const SCORES_KEY = '@stack_tower_scores';
+const HIGH_SCORES_KEY = '@stack_tower_high_scores';
 
 // Cache for frequently accessed data
 let gameDataCache: Partial<GameState> | null = null;
@@ -149,27 +150,53 @@ export const saveScore = async (scoreRecord: ScoreRecord): Promise<void> => {
   }
 };
 
-export const getScores = async (): Promise<ScoreRecord[]> => {
+export const getScores = async (mode?: GameMode): Promise<ScoreRecord[]> => {
   try {
     const scores = await AsyncStorage.getItem(SCORES_KEY);
-    return scores ? JSON.parse(scores) : [];
+    const allScores = scores ? JSON.parse(scores) : [];
+    
+    if (mode) {
+      return allScores.filter((score: ScoreRecord) => score.mode === mode);
+    }
+    
+    return allScores;
   } catch (error) {
     console.error('Error getting scores:', error);
     return [];
   }
 };
 
-export const getTopScores = async (mode?: string, limit: number = 10): Promise<ScoreRecord[]> => {
+export const getTopScores = async (mode?: GameMode, limit: number = 10): Promise<ScoreRecord[]> => {
   try {
     const allScores = await getScores();
     const filteredScores = mode
-      ? allScores.filter(score => score.mode === mode)
+      ? allScores.filter((score: ScoreRecord) => score.mode === mode)
       : allScores;
 
     return filteredScores.slice(0, limit);
   } catch (error) {
     console.error('Error getting top scores:', error);
     return [];
+  }
+};
+
+// New functions for mode-specific high scores
+export const saveHighScores = async (highScores: Record<GameMode, number>): Promise<void> => {
+  try {
+    pendingWrites.push({ key: HIGH_SCORES_KEY, data: highScores });
+    scheduleBatchWrite();
+  } catch (error) {
+    console.error('Error saving high scores:', error);
+  }
+};
+
+export const getHighScores = async (): Promise<Record<GameMode, number>> => {
+  try {
+    const scores = await AsyncStorage.getItem(HIGH_SCORES_KEY);
+    return scores ? JSON.parse(scores) : { classic: 0, timeAttack: 0, challenge: 0 };
+  } catch (error) {
+    console.error('Error getting high scores:', error);
+    return { classic: 0, timeAttack: 0, challenge: 0 };
   }
 };
 
@@ -183,7 +210,7 @@ export const clearAllData = async (): Promise<void> => {
       clearTimeout(writeTimeout);
       writeTimeout = null;
     }
-    await AsyncStorage.multiRemove([HIGH_SCORE_KEY, GAME_DATA_KEY, SCORES_KEY]);
+    await AsyncStorage.multiRemove([HIGH_SCORE_KEY, GAME_DATA_KEY, SCORES_KEY, HIGH_SCORES_KEY]);
   } catch (error) {
     console.error('Error clearing data:', error);
   }

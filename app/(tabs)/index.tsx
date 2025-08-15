@@ -60,7 +60,9 @@ export default function StackTowerGame() {
     setCurrentTheme,
     updateThemeState,
     completeChallengeLevel,
-    getCurrentUnlockedLevel
+    getCurrentUnlockedLevel,
+    updateHighScore: updateContextHighScore,
+    getHighScore
   } = useTheme();
 
   // Sound management
@@ -223,7 +225,8 @@ export default function StackTowerGame() {
   
   // Timer for time attack mode
   useEffect(() => {
-    if (gameState.mode === 'timeAttack' && gameState.gameStarted && !gameState.gameOver && !isPaused) {
+    if ((gameState.mode === 'timeAttack' || (gameState.mode === 'challenge' && gameState.timeRemaining !== undefined)) && 
+        gameState.gameStarted && !gameState.gameOver && !isPaused) {
       timerRef.current = setInterval(updateTimer, 1000);
       return () => {
         if (timerRef.current) clearInterval(timerRef.current);
@@ -331,10 +334,14 @@ export default function StackTowerGame() {
   // Enhanced game over handling with sound effects
   useEffect(() => {
     if (gameState.gameOver && gameState.score > 0 && !gameState.rewardsGranted) {
-      // Store previous high score before updating
-      setPreviousHighScore(highScore);
-      const isNewHighScore = gameState.score > highScore;
+      // Get current high score for this mode
+      const currentHighScore = getHighScore(gameState.mode);
+      setPreviousHighScore(currentHighScore);
+      
+      // Update high score and check if it's new
+      const isNewHighScore = updateContextHighScore(gameState.mode, gameState.score);
 
+      // Also update the legacy high score hook for backward compatibility
       updateHighScore(gameState.score);
 
       // Save score record
@@ -413,7 +420,7 @@ export default function StackTowerGame() {
       setCoinsEarnedThisGame(totalCoinsEarned);
       setGameState(prev => ({ ...prev, rewardsGranted: true }));
     }
-  }, [gameState.gameOver, gameState.score, updateHighScore, addCoins, completeChallengeLevel, playSound, highScore]);
+  }, [gameState.gameOver, gameState.score, updateHighScore, addCoins, completeChallengeLevel, playSound, updateContextHighScore, getHighScore]);
 
   const checkDailyChallengeCompletion = (): boolean => {
     if (!dailyChallenge) return false;
@@ -725,7 +732,7 @@ export default function StackTowerGame() {
           <GameOverScreen
             visible={true}
             score={gameState.score}
-            highScore={highScore}
+            highScore={getHighScore(gameState.mode)}
             mode={gameState.mode}
             coinsEarned={coinsEarnedThisGame}
             challengeStars={challengeStarsEarned}

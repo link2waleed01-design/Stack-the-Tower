@@ -131,7 +131,9 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
               {!isChallengeMode && (
                 <View style={styles.highScoreContainer}>
                   <Text style={styles.highScoreLabel}>High Score</Text>
-                  <Text style={styles.highScoreValue}>{highScore.toLocaleString()}</Text>
+                  <Text style={styles.highScoreValue}>
+                    {isNewHighScore ? (highScore || 0).toLocaleString() : (highScore || 0).toLocaleString()}
+                  </Text>
                 </View>
               )}
             </View>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { runOnJS } from 'react-native-reanimated';
 import { GameState, Block, GameMode, ChallengeLevel } from '../types/game';
 import { createInitialBlock, createNewBlock, calculateCollision, calculateScore } from '../utils/gameLogic';
@@ -8,6 +8,7 @@ import { useSoundManager } from './useSoundManager';
 
 export const useGameState = () => {
   const { playSound } = useSoundManager();
+  const soundPlayedRef = useRef<Set<string>>(new Set());
   
   const [gameState, setGameState] = useState<GameState>({
     blocks: [createInitialBlock()],
@@ -29,8 +30,10 @@ export const useGameState = () => {
     rewardsGranted: false,
   });
 
-  // Memoized functions to prevent unnecessary re-renders
+  // Reset sound tracking when game starts
   const startGame = useCallback((mode: GameMode = 'classic', level?: ChallengeLevel) => {
+    soundPlayedRef.current.clear();
+    
     const initialBlock = createInitialBlock();
     const firstMovingBlock = createNewBlock(initialBlock, 1, mode, level);
 
@@ -67,7 +70,7 @@ export const useGameState = () => {
       const topBlock = prev.blocks[prev.blocks.length - 1];
       const collision = calculateCollision(prev.currentBlock, topBlock);
 
-      // Play click sound when block is dropped
+      // Always play click sound when block is dropped
       runOnJS(() => {
         playSound('click', 0.6);
       })();
@@ -97,14 +100,14 @@ export const useGameState = () => {
       const newPerfectBlocks = collision.isPerfect ? prev.perfectBlocks + 1 : prev.perfectBlocks;
       const scoreIncrease = calculateScore(prev.tower_height, newCombo, collision.isPerfect, prev.mode);
 
-      // Play sound based on collision quality
+      // Always play sound based on collision quality
       runOnJS(() => {
         if (collision.isPerfect) {
-          playSound('chime', 0.7); // Perfect placement sound
+          playSound('chime', 0.7);
         } else if (collision.collisionAccuracy > 0.7) {
-          playSound('drop', 0.5); // Good placement sound
+          playSound('drop', 0.5);
         } else {
-          playSound('drop', 0.3); // Regular placement sound
+          playSound('drop', 0.3);
         }
       })();
 
@@ -159,15 +162,19 @@ export const useGameState = () => {
     return false;
   };
 
-  // Optimized timer update with reduced frequency
+  // Fixed timer update to properly decrement time
   const updateTimer = useCallback(() => {
     setGameState(prev => {
-      if (prev.mode !== 'timeAttack' || !prev.gameStarted || prev.gameOver) return prev;
+      if (prev.mode !== 'timeAttack' && !(prev.mode === 'challenge' && prev.timeRemaining !== undefined)) {
+        return prev;
+      }
+      
+      if (!prev.gameStarted || prev.gameOver) return prev;
 
-      const newTime = (prev.timeRemaining || 0) - 1;
+      const newTime = Math.max(0, (prev.timeRemaining || 0) - 1);
 
       if (newTime <= 0) {
-        // Time attack failed - play failed sound
+        // Time up - play failed sound
         runOnJS(() => {
           playSound('failed', 0.8);
         })();
@@ -197,6 +204,8 @@ export const useGameState = () => {
 
   // Batch state updates for better performance
   const resetGame = useCallback(() => {
+    soundPlayedRef.current.clear();
+    
     setGameState(prev => ({
       ...prev,
       blocks: [createInitialBlock()],

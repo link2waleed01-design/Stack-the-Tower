@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { AppState } from 'react-native';
-import { ChallengeLevel, ScoreRecord } from '../types/game';
+import { ChallengeLevel, ScoreRecord, GameMode } from '../types/game';
 import { CHALLENGE_LEVELS } from '../constants/game';
 import { saveGameData, loadGameData, flushPendingWrites } from '../utils/storage';
 
@@ -28,8 +28,9 @@ interface ThemeContextType {
   updateChallengeProgress: (levelId: number, progress: Partial<ChallengeLevel>) => void;
   completeChallengeLevel: (levelId: number, stars: number, score: number, isNewStars: boolean) => number;
   getCurrentUnlockedLevel: () => number;
-  updateHighScore: (mode: 'classic' | 'timeAttack' | 'challenge', score: number) => void;
+  updateHighScore: (mode: GameMode, score: number) => boolean;
   incrementGamesPlayed: () => void;
+  getHighScore: (mode: GameMode) => number;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -42,7 +43,7 @@ type ThemeAction =
   | { type: 'UPDATE_STATE'; newState: Partial<ThemeState> }
   | { type: 'UPDATE_CHALLENGE_PROGRESS'; levelId: number; progress: Partial<ChallengeLevel> }
   | { type: 'COMPLETE_CHALLENGE_LEVEL'; levelId: number; stars: number; score: number }
-  | { type: 'UPDATE_HIGH_SCORE'; mode: 'classic' | 'timeAttack' | 'challenge'; score: number }
+  | { type: 'UPDATE_HIGH_SCORE'; mode: GameMode; score: number }
   | { type: 'INCREMENT_GAMES_PLAYED' };
 
 const themeReducer = (state: ThemeState, action: ThemeAction): ThemeState => {
@@ -99,7 +100,7 @@ const themeReducer = (state: ThemeState, action: ThemeAction): ThemeState => {
         ...state,
         highScores: {
           ...state.highScores,
-          [action.mode]: Math.max(state.highScores[action.mode], action.score),
+          [action.mode]: Math.max(state.highScores[action.mode] || 0, action.score),
         },
       };
     case 'INCREMENT_GAMES_PLAYED':
@@ -178,6 +179,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             ...savedData,
             challengeProgress: mergedChallengeProgress,
             currentUnlockedLevel: savedData.currentUnlockedLevel || 1,
+            highScores: savedData.highScores || { classic: 0, timeAttack: 0, challenge: 0 },
           }
         });
       }
@@ -187,7 +189,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   // Debounced save to prevent excessive storage operations
-const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Save theme data when state changes
   useEffect(() => {
@@ -277,8 +279,19 @@ const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     return themeState.currentUnlockedLevel;
   };
 
-  const updateHighScore = (mode: 'classic' | 'timeAttack' | 'challenge', score: number) => {
-    dispatch({ type: 'UPDATE_HIGH_SCORE', mode, score });
+  const updateHighScore = (mode: GameMode, score: number): boolean => {
+    const currentHighScore = themeState.highScores[mode] || 0;
+    const isNewHighScore = score > currentHighScore;
+    
+    if (isNewHighScore) {
+      dispatch({ type: 'UPDATE_HIGH_SCORE', mode, score });
+    }
+    
+    return isNewHighScore;
+  };
+
+  const getHighScore = (mode: GameMode): number => {
+    return themeState.highScores[mode] || 0;
   };
 
   const incrementGamesPlayed = () => {
@@ -299,6 +312,7 @@ const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
         getCurrentUnlockedLevel,
         updateHighScore,
         incrementGamesPlayed,
+        getHighScore,
       }}
     >
       {children}

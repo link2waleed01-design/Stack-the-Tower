@@ -1,7 +1,8 @@
-// hooks/useSoundManager.ts
 import { useEffect, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 interface SoundMap {
   [key: string]: Audio.Sound;
 }
@@ -25,16 +26,50 @@ const SOUND_FILES: Record<SoundType, any> = {
   drop: require('../assets/sounds/drop.mp3'),
 };
 
+const SOUND_SETTINGS_KEY = '@stack_tower_sound_settings';
+
 export const useSoundManager = () => {
   const soundsRef = useRef<SoundMap>({});
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const isInitializedRef = useRef(false);
+
+  // Load sound settings from storage
+  useEffect(() => {
+    const loadSoundSettings = async () => {
+      try {
+        const savedSettings = await AsyncStorage.getItem(SOUND_SETTINGS_KEY);
+        if (savedSettings !== null) {
+          setSoundEnabled(JSON.parse(savedSettings));
+        }
+      } catch (error) {
+        console.warn('Failed to load sound settings:', error);
+      }
+    };
+
+    loadSoundSettings();
+  }, []);
+
+  // Save sound settings when changed
+  useEffect(() => {
+    const saveSoundSettings = async () => {
+      try {
+        await AsyncStorage.setItem(SOUND_SETTINGS_KEY, JSON.stringify(soundEnabled));
+      } catch (error) {
+        console.warn('Failed to save sound settings:', error);
+      }
+    };
+
+    saveSoundSettings();
+  }, [soundEnabled]);
 
   // Load all sounds on mount
   useEffect(() => {
     let isMounted = true;
 
     const loadSounds = async () => {
+      if (isInitializedRef.current) return;
+
       try {
         // Set audio mode for better performance
         await Audio.setAudioModeAsync({
@@ -69,6 +104,7 @@ export const useSoundManager = () => {
         
         if (isMounted) {
           setIsLoading(false);
+          isInitializedRef.current = true;
         }
       } catch (error) {
         console.warn('Failed to setup audio mode:', error);
@@ -89,15 +125,15 @@ export const useSoundManager = () => {
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // Pause/stop all sounds when app goes to background
+        // Stop all sounds when app goes to background
         Object.values(soundsRef.current).forEach(async (sound) => {
           try {
             const status = await sound.getStatusAsync();
             if (status.isLoaded && status.isPlaying) {
-              await sound.pauseAsync();
+              await sound.stopAsync();
             }
           } catch (error) {
-            // Ignore errors when pausing sounds
+            // Ignore errors when stopping sounds
           }
         });
       }
@@ -121,7 +157,7 @@ export const useSoundManager = () => {
   }, []);
 
   const playSound = async (soundType: SoundType, volume: number = 0.7) => {
-    if (!soundEnabled || isLoading) return;
+    if (!soundEnabled || isLoading || !isInitializedRef.current) return;
 
     const sound = soundsRef.current[soundType];
     if (!sound) {
@@ -138,14 +174,14 @@ export const useSoundManager = () => {
         return;
       }
 
-      // Stop and rewind if already playing for rapid fire sounds
+      // Always stop and rewind for consistent playback
       if (status.isPlaying) {
         await sound.stopAsync();
-        await sound.setPositionAsync(0);
       }
+      await sound.setPositionAsync(0);
 
       // Set volume and play
-      await sound.setVolumeAsync(volume);
+      await sound.setVolumeAsync(Math.max(0, Math.min(1, volume)));
       await sound.playAsync();
     } catch (error) {
       console.warn(`Failed to play sound ${soundType}:`, error);
