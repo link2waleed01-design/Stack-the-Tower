@@ -20,6 +20,7 @@ import { ModeSelector } from '../../components/ModeSelector';
 import { PauseMenu } from '../../components/PauseMenu';
 import { DailyChallengeModal } from '../../components/DailyChallengeModal';
 import { ThemeSelector } from '../../components/ThemeSelector';
+import { BlockShapeSelector } from '../../components/BlockShapeSelector';
 import { useGameState } from '../../hooks/useGameState';
 import { useHighScore } from '../../hooks/useHighScore';
 import { useTheme } from '../../contexts/GameContext';
@@ -58,6 +59,8 @@ export default function StackTowerGame() {
     addCoins,
     unlockTheme,
     setCurrentTheme,
+    unlockBlockShape,
+    setCurrentBlockShape,
     updateThemeState,
     completeChallengeLevel,
     getCurrentUnlockedLevel,
@@ -79,6 +82,7 @@ export default function StackTowerGame() {
   const [selectedMode, setSelectedMode] = useState<GameMode>('classic');
   const [selectedLevel, setSelectedLevel] = useState<ChallengeLevel | undefined>(undefined);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
+  const [showBlockShapeSelector, setShowBlockShapeSelector] = useState(false);
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null);
   const [showDailyChallenge, setShowDailyChallenge] = useState(false);
   const [coinsEarnedThisGame, setCoinsEarnedThisGame] = useState(0);
@@ -603,10 +607,16 @@ export default function StackTowerGame() {
     setShowThemeSelector(true);
   };
 
+  const handleShapePress = () => {
+    playSound('button', 0.7); // Play button sound
+    setShowBlockShapeSelector(true);
+  };
+
   const handleCloseModals = () => {
     playSound('click', 0.5); // Play subtle click sound
     setShowThemeSelector(false);
     setShowDailyChallenge(false);
+    setShowBlockShapeSelector(false);
   };
 
   const getCurrentChallengeLevel = (): ChallengeLevel | undefined => {
@@ -693,12 +703,21 @@ export default function StackTowerGame() {
         <Animated.View style={[styles.gameArea, cameraStyle]}>
           {/* Static blocks */}
           {gameState.currentBlock && gameState.blocks.map((block) => (
-            <Block key={block.id} block={block} themeId={themeState.currentTheme} />
+            <Block 
+              key={block.id} 
+              block={block} 
+              themeId={themeState.currentTheme}
+              shapeId={themeState.currentBlockShape}
+            />
           ))}
 
           {/* Moving block */}
           {gameState.currentBlock && (
-            <Block block={gameState.currentBlock} themeId={themeState.currentTheme} />
+            <Block 
+              block={gameState.currentBlock} 
+              themeId={themeState.currentTheme}
+              shapeId={themeState.currentBlockShape}
+            />
           )}
         </Animated.View>
 
@@ -711,9 +730,11 @@ export default function StackTowerGame() {
             onClose={() => { }}
             coins={themeState.coins}
             onThemePress={handleThemePress}
+            onShapePress={handleShapePress}
             showAsMainMenu={true}
             setSelectedMode={setSelectedMode}
             currentTheme={themeState.currentTheme}
+            currentBlockShape={themeState.currentBlockShape}
           />
         )}
 
@@ -755,6 +776,18 @@ export default function StackTowerGame() {
           coins={themeState.coins}
           onThemeSelect={handleThemeSelect}
           onThemePurchase={handleThemePurchase}
+          onClose={handleCloseModals}
+        />
+
+        <BlockShapeSelector
+          visible={showBlockShapeSelector}
+          currentShape={themeState.currentBlockShape}
+          unlockedShapes={themeState.unlockedBlockShapes}
+          currentTheme={themeState.currentTheme}
+          onShapeSelect={(shapeId) => {
+            playSound('button', 0.7);
+            setCurrentBlockShape(shapeId);
+          }}
           onClose={handleCloseModals}
         />
 

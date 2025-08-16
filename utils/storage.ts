@@ -65,6 +65,8 @@ export const saveGameData = async (gameData: Partial<GameState>): Promise<void> 
       coins: gameData.coins || 0,
       currentTheme: gameData.currentTheme || 'default',
       unlockedThemes: gameData.unlockedThemes || ['default'],
+      currentBlockShape: gameData.currentBlockShape || 'rectangle',
+      unlockedBlockShapes: gameData.unlockedBlockShapes || ['rectangle'],
       unlockedSkins: gameData.unlockedSkins || [],
       dailyChallengeCompleted: gameData.dailyChallengeCompleted || false,
       lastDailyChallengeDate: gameData.lastDailyChallengeDate || '',

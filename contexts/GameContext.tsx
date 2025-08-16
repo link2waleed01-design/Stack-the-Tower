@@ -8,6 +8,8 @@ interface ThemeState {
   coins: number;
   currentTheme: string;
   unlockedThemes: string[];
+  currentBlockShape: string;
+  unlockedBlockShapes: string[];
   challengeProgress: Record<number, ChallengeLevel>;
   currentUnlockedLevel: number;
   highScores: {
@@ -24,6 +26,8 @@ interface ThemeContextType {
   addCoins: (amount: number) => void;
   unlockTheme: (themeId: string) => void;
   setCurrentTheme: (themeId: string) => void;
+  unlockBlockShape: (shapeId: string) => void;
+  setCurrentBlockShape: (shapeId: string) => void;
   updateThemeState: (newState: Partial<ThemeState>) => void;
   updateChallengeProgress: (levelId: number, progress: Partial<ChallengeLevel>) => void;
   completeChallengeLevel: (levelId: number, stars: number, score: number, isNewStars: boolean) => number;
@@ -40,6 +44,8 @@ type ThemeAction =
   | { type: 'ADD_COINS'; amount: number }
   | { type: 'UNLOCK_THEME'; themeId: string }
   | { type: 'SET_CURRENT_THEME'; themeId: string }
+  | { type: 'UNLOCK_BLOCK_SHAPE'; shapeId: string }
+  | { type: 'SET_CURRENT_BLOCK_SHAPE'; shapeId: string }
   | { type: 'UPDATE_STATE'; newState: Partial<ThemeState> }
   | { type: 'UPDATE_CHALLENGE_PROGRESS'; levelId: number; progress: Partial<ChallengeLevel> }
   | { type: 'COMPLETE_CHALLENGE_LEVEL'; levelId: number; stars: number; score: number }
@@ -61,6 +67,15 @@ const themeReducer = (state: ThemeState, action: ThemeAction): ThemeState => {
       };
     case 'SET_CURRENT_THEME':
       return { ...state, currentTheme: action.themeId };
+    case 'UNLOCK_BLOCK_SHAPE':
+      return {
+        ...state,
+        unlockedBlockShapes: state.unlockedBlockShapes.includes(action.shapeId)
+          ? state.unlockedBlockShapes
+          : [...state.unlockedBlockShapes, action.shapeId],
+      };
+    case 'SET_CURRENT_BLOCK_SHAPE':
+      return { ...state, currentBlockShape: action.shapeId };
     case 'UPDATE_STATE':
       return { ...state, ...action.newState };
     case 'UPDATE_CHALLENGE_PROGRESS':
@@ -128,6 +143,8 @@ const initialState: ThemeState = {
   coins: 0,
   currentTheme: 'default',
   unlockedThemes: ['default'],
+  currentBlockShape: 'rectangle',
+  unlockedBlockShapes: ['rectangle'],
   challengeProgress: initializeChallengeProgress(),
   currentUnlockedLevel: 1,
   highScores: {
@@ -180,6 +197,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             challengeProgress: mergedChallengeProgress,
             currentUnlockedLevel: savedData.currentUnlockedLevel || 1,
             highScores: savedData.highScores || { classic: 0, timeAttack: 0, challenge: 0 },
+            currentBlockShape: savedData.currentBlockShape || 'rectangle',
+            unlockedBlockShapes: savedData.unlockedBlockShapes || ['rectangle'],
           }
         });
       }
@@ -203,6 +222,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         coins: themeState.coins,
         currentTheme: themeState.currentTheme,
         unlockedThemes: themeState.unlockedThemes,
+        currentBlockShape: themeState.currentBlockShape,
+        unlockedBlockShapes: themeState.unlockedBlockShapes,
         challengeProgress: themeState.challengeProgress,
         currentUnlockedLevel: themeState.currentUnlockedLevel,
         highScores: themeState.highScores,
@@ -223,6 +244,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     themeState.coins, 
     themeState.currentTheme, 
     themeState.unlockedThemes,
+    themeState.currentBlockShape,
+    themeState.unlockedBlockShapes,
     themeState.challengeProgress,
     themeState.currentUnlockedLevel,
     themeState.highScores,
@@ -243,6 +266,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setCurrentTheme = (themeId: string) => {
     dispatch({ type: 'SET_CURRENT_THEME', themeId });
+  };
+
+  const unlockBlockShape = (shapeId: string) => {
+    dispatch({ type: 'UNLOCK_BLOCK_SHAPE', shapeId });
+  };
+
+  const setCurrentBlockShape = (shapeId: string) => {
+    dispatch({ type: 'SET_CURRENT_BLOCK_SHAPE', shapeId });
   };
 
   const updateThemeState = (newState: Partial<ThemeState>) => {
@@ -306,6 +337,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addCoins,
         unlockTheme,
         setCurrentTheme,
+        unlockBlockShape,
+        setCurrentBlockShape,
         updateThemeState,
         updateChallengeProgress,
         completeChallengeLevel,

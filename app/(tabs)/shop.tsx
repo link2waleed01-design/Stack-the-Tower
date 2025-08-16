@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Coins, Lock, Check, Star, Crown, Zap, Gift, ShoppingBag } from 'lucide-react-native';
-import { Theme } from '@/types/game';
-import { THEMES } from '@/constants/game';
+import { Coins, Lock, Check, Star, Crown, Zap, Gift, ShoppingBag, Palette, Box } from 'lucide-react-native';
+import { Theme, BlockShape } from '@/types/game';
+import { THEMES, BLOCK_SHAPES } from '@/constants/game';
 import { useTheme } from '@/contexts/GameContext';
 import { useSoundManager } from '@/hooks/useSoundManager';
+import { getBlockColors } from '@/utils/gameLogic';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,8 +29,89 @@ const getRarityIcon = (rarity: string) => {
   }
 };
 
+// Block Shape Preview Component
+const BlockShapePreview: React.FC<{
+  shape: BlockShape;
+  themeId: string;
+  size?: number;
+}> = ({ shape, themeId, size = 60 }) => {
+  const scaleX = size / shape.preview.width;
+  const scaleY = (size * 0.6) / shape.preview.height;
+
+  const renderElement = (element: any, index: number) => {
+    const colors = getBlockColors(element.colorIndex, themeId);
+    const elementStyle = {
+      position: 'absolute' as const,
+      left: element.x * scaleX,
+      top: element.y * scaleY,
+      width: element.width * scaleX,
+      height: element.height * scaleY,
+      opacity: element.opacity || 1,
+    };
+
+    switch (element.type) {
+      case 'triangle':
+        return (
+          <View
+            key={`${element.id}-${index}`}
+            style={[
+              elementStyle,
+              {
+                width: 0,
+                height: 0,
+                backgroundColor: 'transparent',
+                borderStyle: 'solid',
+                borderLeftWidth: (element.width * scaleX) / 2,
+                borderRightWidth: (element.width * scaleX) / 2,
+                borderBottomWidth: element.height * scaleY,
+                borderLeftColor: 'transparent',
+                borderRightColor: 'transparent',
+                borderBottomColor: colors[0],
+              },
+            ]}
+          />
+        );
+      case 'circle':
+        return (
+          <View
+            key={`${element.id}-${index}`}
+            style={[
+              elementStyle,
+              {
+                backgroundColor: colors[0],
+                borderRadius: (element.width * scaleX) / 2,
+              },
+            ]}
+          />
+        );
+      case 'rect':
+      default:
+        return (
+          <LinearGradient
+            key={`${element.id}-${index}`}
+            colors={[colors[0], colors[1]]}
+            style={[
+              elementStyle,
+              {
+                borderRadius: (element.borderRadius || 0) * Math.min(scaleX, scaleY),
+              },
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        );
+    }
+  };
+
+  return (
+    <View style={{ width: size, height: size * 0.6, position: 'relative' }}>
+      {shape.preview.elements.map(renderElement)}
+    </View>
+  );
+};
+
 export default function Shop() {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('themes');
   const { playSound } = useSoundManager();
   
   // Use global theme context instead of local state
@@ -37,7 +119,9 @@ export default function Shop() {
     themeState, 
     spendCoins, 
     unlockTheme, 
-    setCurrentTheme 
+    setCurrentTheme,
+    unlockBlockShape,
+    setCurrentBlockShape
   } = useTheme();
 
   const handleThemeSelect = (themeId: string) => {
@@ -65,6 +149,31 @@ export default function Shop() {
     }
   };
 
+  const handleBlockShapeSelect = (shapeId: string) => {
+    // Play button sound for shape selection
+    playSound('button', 0.7);
+    
+    // Only allow selection if shape is unlocked
+    if (themeState.unlockedBlockShapes.includes(shapeId)) {
+      setCurrentBlockShape(shapeId);
+    }
+  };
+
+  const handleBlockShapePurchase = (shapeId: string) => {
+    const shape = BLOCK_SHAPES.find(s => s.id === shapeId);
+    if (shape && themeState.coins >= shape.cost) {
+      // Play purchase sound
+      playSound('purchase', 0.8);
+      
+      spendCoins(shape.cost);
+      unlockBlockShape(shapeId);
+      setCurrentBlockShape(shapeId);
+    } else {
+      // Play failed sound if not enough coins
+      playSound('failed', 0.5);
+    }
+  };
+
   const handleCategorySelect = (categoryId: string) => {
     // Play button sound for category selection
     playSound('button', 0.6);
@@ -72,20 +181,18 @@ export default function Shop() {
   };
 
   const categories = [
-    { id: 'all', name: 'All', icon: <ShoppingBag size={16} color="#fff" /> },
-    { id: 'common', name: 'Common', icon: null },
-    { id: 'rare', name: 'Rare', icon: <Star size={16} color="#2196f3" /> },
-    { id: 'epic', name: 'Epic', icon: <Zap size={16} color="#9c27b0" /> },
-    { id: 'legendary', name: 'Legendary', icon: <Crown size={16} color="#ff9800" /> },
+    { id: 'themes', name: 'Themes', icon: <Palette size={16} color="#fff" /> },
+    { id: 'shapes', name: 'Block Shapes', icon: <Box size={16} color="#fff" /> },
   ];
 
-  const filteredThemes = THEMES.filter(theme => 
-    selectedCategory === 'all' || theme.rarity === selectedCategory
-  );
-
-  const updatedThemes = filteredThemes.map(theme => ({
+  const updatedThemes = THEMES.map(theme => ({
     ...theme,
     unlocked: themeState.unlockedThemes.includes(theme.id)
+  }));
+
+  const updatedBlockShapes = BLOCK_SHAPES.map(shape => ({
+    ...shape,
+    unlocked: themeState.unlockedBlockShapes.includes(shape.id)
   }));
 
   return (
@@ -134,108 +241,206 @@ export default function Shop() {
         ))}
       </ScrollView>
 
-      {/* Themes Grid */}
+      {/* Content based on selected category */}
       <ScrollView style={styles.themesContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.themesGrid}>
-          {updatedThemes.map((theme) => (
-            <TouchableOpacity
-              key={theme.id}
-              style={[
-                styles.themeCard,
-                themeState.currentTheme === theme.id && styles.selectedThemeCard,
-              ]}
-              onPress={() => {
-                if (theme.unlocked) {
-                  handleThemeSelect(theme.id);
-                } else if (themeState.coins >= theme.cost) {
-                  handleThemePurchase(theme.id);
-                } else {
-                  // Play failed sound if can't afford
-                  playSound('failed', 0.5);
-                }
-              }}
-              disabled={!theme.unlocked && themeState.coins < theme.cost}
-            >
-              {/* Rarity Border */}
-              <View style={[
-                styles.rarityBorder,
-                { borderColor: getRarityColor(theme.rarity || 'common') }
-              ]} />
-              
-              {/* Theme Preview */}
-              <LinearGradient
-                colors={theme.backgroundColors}
-                style={styles.themePreview}
+        {selectedCategory === 'themes' && (
+          <View style={styles.themesGrid}>
+            {updatedThemes.map((theme) => (
+              <TouchableOpacity
+                key={theme.id}
+                style={[
+                  styles.themeCard,
+                  themeState.currentTheme === theme.id && styles.selectedThemeCard,
+                ]}
+                onPress={() => {
+                  if (theme.unlocked) {
+                    handleThemeSelect(theme.id);
+                  } else if (themeState.coins >= theme.cost) {
+                    handleThemePurchase(theme.id);
+                  } else {
+                    // Play failed sound if can't afford
+                    playSound('failed', 0.5);
+                  }
+                }}
+                disabled={!theme.unlocked && themeState.coins < theme.cost}
               >
-                <View style={styles.blockPreview}>
-                  {theme.blockColors.slice(0, 6).map((colors, index) => (
-                    <LinearGradient
-                      key={index}
-                      colors={colors}
-                      style={styles.miniBlock}
-                    />
-                  ))}
-                </View>
+                {/* Rarity Border */}
+                <View style={[
+                  styles.rarityBorder,
+                  { borderColor: getRarityColor(theme.rarity || 'common') }
+                ]} />
                 
-                {/* Locked Overlay */}
-                {!theme.unlocked && (
-                  <View style={styles.lockedOverlay}>
-                    <Lock size={20} color="rgba(255,255,255,0.8)" />
+                {/* Theme Preview */}
+                <LinearGradient
+                  colors={theme.backgroundColors}
+                  style={styles.themePreview}
+                >
+                  <View style={styles.blockPreview}>
+                    {theme.blockColors.slice(0, 6).map((colors, index) => (
+                      <LinearGradient
+                        key={index}
+                        colors={colors}
+                        style={styles.miniBlock}
+                      />
+                    ))}
                   </View>
-                )}
-              </LinearGradient>
-              
-              {/* Theme Info */}
-              <View style={styles.themeInfo}>
-                <View style={styles.themeHeader}>
-                  <Text style={styles.themeName}>{theme.name}</Text>
-                  {getRarityIcon(theme.rarity || 'common')}
-                </View>
-                
-                <Text style={styles.themeDescription} numberOfLines={2}>
-                  {theme.description}
-                </Text>
-                
-                {/* Status/Action */}
-                <View style={styles.themeAction}>
-                  {themeState.currentTheme === theme.id ? (
-                    <View style={styles.selectedBadge}>
-                      <Check size={14} color="#4facfe" />
-                      <Text style={styles.selectedText}>Active</Text>
+                  
+                  {/* Locked Overlay */}
+                  {!theme.unlocked && (
+                    <View style={styles.lockedOverlay}>
+                      <Lock size={20} color="rgba(255,255,255,0.8)" />
                     </View>
-                  ) : theme.unlocked ? (
-                    <TouchableOpacity
-                      style={styles.selectButton}
-                      onPress={() => handleThemeSelect(theme.id)}
-                    >
-                      <Text style={styles.selectButtonText}>Select</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View style={styles.priceContainer}>
-                      {themeState.coins >= theme.cost ? (
-                        <TouchableOpacity
-                          style={styles.buyButton}
-                          onPress={() => handleThemePurchase(theme.id)}
-                        >
-                          <Coins size={14} color="#FFD700" />
-                          <Text style={styles.buyButtonText}>{theme.cost}</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity 
-                          style={styles.cantAffordContainer}
-                          onPress={() => playSound('failed', 0.4)}
-                        >
-                          <Coins size={14} color="#666" />
-                          <Text style={styles.cantAffordText}>{theme.cost}</Text>
-                        </TouchableOpacity>
-                      )}
+                  )}
+                </LinearGradient>
+                
+                {/* Theme Info */}
+                <View style={styles.themeInfo}>
+                  <View style={styles.themeHeader}>
+                    <Text style={styles.themeName}>{theme.name}</Text>
+                    {getRarityIcon(theme.rarity || 'common')}
+                  </View>
+                  
+                  <Text style={styles.themeDescription} numberOfLines={2}>
+                    {theme.description}
+                  </Text>
+                  
+                  {/* Status/Action */}
+                  <View style={styles.themeAction}>
+                    {themeState.currentTheme === theme.id ? (
+                      <View style={styles.selectedBadge}>
+                        <Check size={14} color="#4facfe" />
+                        <Text style={styles.selectedText}>Active</Text>
+                      </View>
+                    ) : theme.unlocked ? (
+                      <TouchableOpacity
+                        style={styles.selectButton}
+                        onPress={() => handleThemeSelect(theme.id)}
+                      >
+                        <Text style={styles.selectButtonText}>Select</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.priceContainer}>
+                        {themeState.coins >= theme.cost ? (
+                          <TouchableOpacity
+                            style={styles.buyButton}
+                            onPress={() => handleThemePurchase(theme.id)}
+                          >
+                            <Coins size={14} color="#FFD700" />
+                            <Text style={styles.buyButtonText}>{theme.cost}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.cantAffordContainer}
+                            onPress={() => playSound('failed', 0.4)}
+                          >
+                            <Coins size={14} color="#666" />
+                            <Text style={styles.cantAffordText}>{theme.cost}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {selectedCategory === 'shapes' && (
+          <View style={styles.themesGrid}>
+            {updatedBlockShapes.map((shape) => (
+              <TouchableOpacity
+                key={shape.id}
+                style={[
+                  styles.themeCard,
+                  themeState.currentBlockShape === shape.id && styles.selectedThemeCard,
+                ]}
+                onPress={() => {
+                  if (shape.unlocked) {
+                    handleBlockShapeSelect(shape.id);
+                  } else if (themeState.coins >= shape.cost) {
+                    handleBlockShapePurchase(shape.id);
+                  } else {
+                    // Play failed sound if can't afford
+                    playSound('failed', 0.5);
+                  }
+                }}
+                disabled={!shape.unlocked && themeState.coins < shape.cost}
+              >
+                {/* Rarity Border */}
+                <View style={[
+                  styles.rarityBorder,
+                  { borderColor: getRarityColor(shape.rarity || 'common') }
+                ]} />
+                
+                {/* Shape Preview */}
+                <View style={styles.shapePreviewContainer}>
+                  <BlockShapePreview 
+                    shape={shape} 
+                    themeId={themeState.currentTheme}
+                    size={80}
+                  />
+                  
+                  {/* Locked Overlay */}
+                  {!shape.unlocked && (
+                    <View style={styles.lockedOverlay}>
+                      <Lock size={20} color="rgba(255,255,255,0.8)" />
                     </View>
                   )}
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+                
+                {/* Shape Info */}
+                <View style={styles.themeInfo}>
+                  <View style={styles.themeHeader}>
+                    <Text style={styles.themeName}>{shape.name}</Text>
+                    {getRarityIcon(shape.rarity || 'common')}
+                  </View>
+                  
+                  <Text style={styles.themeDescription} numberOfLines={2}>
+                    {shape.description}
+                  </Text>
+                  
+                  {/* Status/Action */}
+                  <View style={styles.themeAction}>
+                    {themeState.currentBlockShape === shape.id ? (
+                      <View style={styles.selectedBadge}>
+                        <Check size={14} color="#4facfe" />
+                        <Text style={styles.selectedText}>Active</Text>
+                      </View>
+                    ) : shape.unlocked ? (
+                      <TouchableOpacity
+                        style={styles.selectButton}
+                        onPress={() => handleBlockShapeSelect(shape.id)}
+                      >
+                        <Text style={styles.selectButtonText}>Select</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.priceContainer}>
+                        {themeState.coins >= shape.cost ? (
+                          <TouchableOpacity
+                            style={styles.buyButton}
+                            onPress={() => handleBlockShapePurchase(shape.id)}
+                          >
+                            <Coins size={14} color="#FFD700" />
+                            <Text style={styles.buyButtonText}>{shape.cost}</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <TouchableOpacity 
+                            style={styles.cantAffordContainer}
+                            onPress={() => playSound('failed', 0.4)}
+                          >
+                            <Coins size={14} color="#666" />
+                            <Text style={styles.cantAffordText}>{shape.cost}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         
         {/* Footer Spacing */}
         <View style={styles.footer} />
@@ -346,6 +551,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
+  shapePreviewContainer: {
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
   blockPreview: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -447,3 +659,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
+
+                        >
+                          <Coins size={14} color="#FFD700" />
+                          <Text style={styles.buyButtonText}>{theme.cost}</Text>

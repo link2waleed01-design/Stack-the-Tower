@@ -29,6 +29,8 @@ export interface GameState {
   coins: number;
   currentTheme: string;
   unlockedThemes: string[];
+  currentBlockShape?: string;
+  unlockedBlockShapes?: string[];
   unlockedSkins: string[];
   dailyChallengeCompleted: boolean;
   lastDailyChallengeDate: string;
@@ -97,6 +99,34 @@ export interface Theme {
   cost: number;
   rarity?: 'common' | 'rare' | 'epic' | 'legendary';
   description?: string;
+}
+
+export interface BlockShape {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  unlocked: boolean;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  preview: {
+    width: number;
+    height: number;
+    elements: BlockShapeElement[];
+  };
+}
+
+export interface BlockShapeElement {
+  id: string;
+  type: 'rect' | 'triangle' | 'circle' | 'path';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  colorIndex: number; // Which theme color to use
+  opacity?: number;
+  borderRadius?: number;
+  rotation?: number;
+  path?: string; // For SVG paths
 }
 
 export interface ScoreRecord {

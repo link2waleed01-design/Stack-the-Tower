@@ -886,3 +886,228 @@ export const THEMES: Theme[] = [
     description: 'Ultimate prestige and brilliance'
   },
 ];
+
+export const BLOCK_SHAPES: import('../types/game').BlockShape[] = [
+  {
+    id: 'rectangle',
+    name: 'Classic',
+    description: 'The original rectangular block',
+    cost: 0,
+    unlocked: true,
+    rarity: 'common',
+    preview: {
+      width: 60,
+      height: 20,
+      elements: [
+        {
+          id: 'main',
+          type: 'rect',
+          x: 0,
+          y: 0,
+          width: 60,
+          height: 20,
+          colorIndex: 0,
+          borderRadius: 6,
+        }
+      ]
+    }
+  },
+  {
+    id: 'house',
+    name: 'House',
+    description: 'Cozy home blocks with roof and windows',
+    cost: 200,
+    unlocked: false,
+    rarity: 'common',
+    preview: {
+      width: 60,
+      height: 24,
+      elements: [
+        // Roof
+        {
+          id: 'roof',
+          type: 'triangle',
+          x: 10,
+          y: 0,
+          width: 40,
+          height: 12,
+          colorIndex: 1,
+        },
+        // Main house body
+        {
+          id: 'body',
+          type: 'rect',
+          x: 5,
+          y: 8,
+          width: 50,
+          height: 16,
+          colorIndex: 0,
+          borderRadius: 2,
+        },
+        // Door
+        {
+          id: 'door',
+          type: 'rect',
+          x: 25,
+          y: 14,
+          width: 10,
+          height: 10,
+          colorIndex: 2,
+          borderRadius: 1,
+        },
+        // Windows
+        {
+          id: 'window1',
+          type: 'rect',
+          x: 12,
+          y: 12,
+          width: 8,
+          height: 6,
+          colorIndex: 3,
+          borderRadius: 1,
+        },
+        {
+          id: 'window2',
+          type: 'rect',
+          x: 40,
+          y: 12,
+          width: 8,
+          height: 6,
+          colorIndex: 3,
+          borderRadius: 1,
+        }
+      ]
+    }
+  },
+  {
+    id: 'candy',
+    name: 'Candy',
+    description: 'Sweet candy blocks with wrapper',
+    cost: 300,
+    unlocked: false,
+    rarity: 'rare',
+    preview: {
+      width: 60,
+      height: 20,
+      elements: [
+        // Candy wrapper
+        {
+          id: 'wrapper',
+          type: 'rect',
+          x: 0,
+          y: 0,
+          width: 60,
+          height: 20,
+          colorIndex: 0,
+          borderRadius: 10,
+        },
+        // Candy filling
+        {
+          id: 'filling',
+          type: 'rect',
+          x: 8,
+          y: 4,
+          width: 44,
+          height: 12,
+          colorIndex: 1,
+          borderRadius: 6,
+        },
+        // Candy stripes
+        {
+          id: 'stripe1',
+          type: 'rect',
+          x: 15,
+          y: 2,
+          width: 4,
+          height: 16,
+          colorIndex: 2,
+          borderRadius: 2,
+        },
+        {
+          id: 'stripe2',
+          type: 'rect',
+          x: 25,
+          y: 2,
+          width: 4,
+          height: 16,
+          colorIndex: 2,
+          borderRadius: 2,
+        },
+        {
+          id: 'stripe3',
+          type: 'rect',
+          x: 35,
+          y: 2,
+          width: 4,
+          height: 16,
+          colorIndex: 2,
+          borderRadius: 2,
+        }
+      ]
+    }
+  },
+  {
+    id: 'pizza',
+    name: 'Pizza',
+    description: 'Delicious pizza slices with toppings',
+    cost: 400,
+    unlocked: false,
+    rarity: 'epic',
+    preview: {
+      width: 60,
+      height: 20,
+      elements: [
+        // Pizza base
+        {
+          id: 'base',
+          type: 'rect',
+          x: 0,
+          y: 0,
+          width: 60,
+          height: 20,
+          colorIndex: 0,
+          borderRadius: 8,
+        },
+        // Cheese layer
+        {
+          id: 'cheese',
+          type: 'rect',
+          x: 3,
+          y: 3,
+          width: 54,
+          height: 14,
+          colorIndex: 1,
+          borderRadius: 6,
+        },
+        // Pepperoni
+        {
+          id: 'pepperoni1',
+          type: 'circle',
+          x: 12,
+          y: 6,
+          width: 8,
+          height: 8,
+          colorIndex: 2,
+        },
+        {
+          id: 'pepperoni2',
+          type: 'circle',
+          x: 30,
+          y: 8,
+          width: 6,
+          height: 6,
+          colorIndex: 2,
+        },
+        {
+          id: 'pepperoni3',
+          type: 'circle',
+          x: 45,
+          y: 6,
+          width: 7,
+          height: 7,
+          colorIndex: 2,
+        }
+      ]
+    }
+  }
+];

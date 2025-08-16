@@ -12,9 +12,10 @@ import Animated, {
   withDelay,
   withSpring,
 } from 'react-native-reanimated';
-import { Infinity, Clock, Target, Lock, Palette, Coins, Settings, Zap, Trophy, Star, Gamepad2 } from 'lucide-react-native';
+import { Infinity, Clock, Target, Lock, Palette, Coins, Settings, Zap, Trophy, Star, Gamepad2, Box } from 'lucide-react-native';
 import { GameMode, GameModeConfig } from '../types/game';
-import { GAME_MODES, THEMES } from '../constants/game';
+import { GAME_MODES, THEMES, BLOCK_SHAPES } from '../constants/game';
+import { getBlockColors } from '../utils/gameLogic';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -25,9 +26,11 @@ interface ModeSelectorProps {
   onClose: () => void;
   coins?: number;
   onThemePress?: () => void;
+  onShapePress?: () => void;
   showAsMainMenu?: boolean;
   setSelectedMode?: (mode: GameMode) => void;
   currentTheme?: string;
+  currentBlockShape?: string;
 }
 
 const ModeIcon = ({ mode, size = 32, color = '#fff' }: { mode: GameMode; size?: number; color?: string }) => {
@@ -43,7 +46,7 @@ const ModeIcon = ({ mode, size = 32, color = '#fff' }: { mode: GameMode; size?: 
   }
 };
 
-// Animated Block Component for Home Screen
+// Animated Block Component for Home Screen with Shape Support
 const AnimatedBlock = ({ 
   width, 
   height = 32, 
@@ -51,7 +54,8 @@ const AnimatedBlock = ({
   y, 
   colors, 
   delay = 0, 
-  themeId = 'default' 
+  themeId = 'default',
+  shapeId = 'rectangle'
 }: {
   width: number;
   height?: number;
@@ -60,6 +64,7 @@ const AnimatedBlock = ({
   colors: readonly [string, string];
   delay?: number;
   themeId?: string;
+  shapeId?: string;
 }) => {
   const scaleValue = useSharedValue(0);
   const glowValue = useSharedValue(0);
@@ -108,6 +113,96 @@ const AnimatedBlock = ({
     }
   };
 
+  // Render shaped block if not rectangle
+  if (shapeId !== 'rectangle') {
+    const blockShape = BLOCK_SHAPES.find(shape => shape.id === shapeId);
+    if (blockShape) {
+      const scaleX = width / blockShape.preview.width;
+      const scaleY = height / blockShape.preview.height;
+
+      return (
+        <Animated.View
+          style={[
+            styles.animatedBlock,
+            {
+              width,
+              height,
+              shadowColor: themeId === 'neon' ? '#00ffff' : 
+                          themeId === 'volcanic' ? '#ff4500' : 
+                          themeId === 'golden' ? '#ffd700' : '#000',
+            },
+            animatedStyle,
+          ]}
+        >
+          {blockShape.preview.elements.map((element, index) => {
+            const elementColors = getBlockColors(element.colorIndex, themeId);
+            const elementStyle = {
+              position: 'absolute' as const,
+              left: element.x * scaleX,
+              top: element.y * scaleY,
+              width: element.width * scaleX,
+              height: element.height * scaleY,
+            };
+
+            switch (element.type) {
+              case 'triangle':
+                return (
+                  <View
+                    key={`${element.id}-${index}`}
+                    style={[
+                      elementStyle,
+                      {
+                        width: 0,
+                        height: 0,
+                        backgroundColor: 'transparent',
+                        borderStyle: 'solid',
+                        borderLeftWidth: (element.width * scaleX) / 2,
+                        borderRightWidth: (element.width * scaleX) / 2,
+                        borderBottomWidth: element.height * scaleY,
+                        borderLeftColor: 'transparent',
+                        borderRightColor: 'transparent',
+                        borderBottomColor: elementColors[0],
+                      },
+                    ]}
+                  />
+                );
+              case 'circle':
+                return (
+                  <View
+                    key={`${element.id}-${index}`}
+                    style={[
+                      elementStyle,
+                      {
+                        backgroundColor: elementColors[0],
+                        borderRadius: (element.width * scaleX) / 2,
+                      },
+                    ]}
+                  />
+                );
+              case 'rect':
+              default:
+                return (
+                  <LinearGradient
+                    key={`${element.id}-${index}`}
+                    colors={[elementColors[0], elementColors[1]]}
+                    style={[
+                      elementStyle,
+                      {
+                        borderRadius: (element.borderRadius || 0) * Math.min(scaleX, scaleY),
+                      },
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                );
+            }
+          })}
+        </Animated.View>
+      );
+    }
+  }
+
+  // Default rectangular block
   return (
     <Animated.View
       style={[
@@ -269,9 +364,11 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
   onClose,
   coins = 0,
   onThemePress,
+  onShapePress,
   showAsMainMenu = false,
   setSelectedMode,
-  currentTheme = 'default'
+  currentTheme = 'default',
+  currentBlockShape = 'rectangle'
 }) => {
   const [titleScale] = useState(useSharedValue(0));
   const [stackOffset] = useState(useSharedValue(50));
@@ -354,6 +451,15 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
                 </LinearGradient>
               </TouchableOpacity>
               
+              <TouchableOpacity onPress={onShapePress} style={styles.settingsButton}>
+                <LinearGradient
+                  colors={[themeStyles.cardOverlay, 'rgba(255, 255, 255, 0.08)']}
+                  style={styles.settingsGradient}
+                >
+                  <Box size={24} color={themeStyles.accent} />
+                </LinearGradient>
+              </TouchableOpacity>
+              
               <TouchableOpacity style={styles.settingsButton}>
                 <LinearGradient
                   colors={[themeStyles.cardOverlay, 'rgba(255, 255, 255, 0.08)']}
@@ -379,6 +485,7 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
                 colors={blockColors[0]}
                 delay={800}
                 themeId={currentTheme}
+                shapeId={currentBlockShape}
               />
               <MemoizedAnimatedBlock
                 width={105}
@@ -388,6 +495,7 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
                 colors={blockColors[1]}
                 delay={1000}
                 themeId={currentTheme}
+                shapeId={currentBlockShape}
               />
               <MemoizedAnimatedBlock
                 width={125}
@@ -397,6 +505,7 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
                 colors={blockColors[2]}
                 delay={1200}
                 themeId={currentTheme}
+                shapeId={currentBlockShape}
               />
               <MemoizedAnimatedBlock
                 width={95} 
@@ -406,6 +515,7 @@ const ModeSelectorComponent: React.FC<ModeSelectorProps> = ({
                 colors={blockColors[3]}
                 delay={1400}
                 themeId={currentTheme}
+                shapeId={currentBlockShape}
               />
             </Animated.View>
 
@@ -593,7 +703,8 @@ export const ModeSelector = memo(ModeSelectorComponent, (prevProps, nextProps) =
     prevProps.visible === nextProps.visible &&
     prevProps.coins === nextProps.coins &&
     prevProps.currentTheme === nextProps.currentTheme &&
-    prevProps.showAsMainMenu === nextProps.showAsMainMenu
+    prevProps.showAsMainMenu === nextProps.showAsMainMenu &&
+    prevProps.currentBlockShape === nextProps.currentBlockShape
   );
 });
 

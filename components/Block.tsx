@@ -11,11 +11,13 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Block as BlockType } from '../types/game';
 import { getBlockColors } from '../utils/gameLogic';
+import { ShapedBlock } from './ShapedBlock';
 
 interface BlockProps {
   block: BlockType;
   isDropping?: boolean;
   themeId?: string;
+  shapeId?: string;
 }
 
 // Memoized style calculations for better performance
@@ -65,8 +67,22 @@ const shadowStyles = {
 const BlockComponent: React.FC<BlockProps> = ({ 
   block, 
   isDropping = false, 
-  themeId = 'default' 
+  themeId = 'default',
+  shapeId = 'rectangle'
 }) => {
+  // If using a custom shape, render the ShapedBlock component
+  if (shapeId !== 'rectangle') {
+    return (
+      <ShapedBlock
+        block={block}
+        isDropping={isDropping}
+        themeId={themeId}
+        shapeId={shapeId}
+      />
+    );
+  }
+
+  // Otherwise, render the classic rectangular block
   const colorIndex = block.id === 'base' ? 0 : parseInt(block.id.split('-')[1] || '0') % 8;
   const [startColor, endColor] = getBlockColors(colorIndex, themeId);
 
@@ -182,7 +198,8 @@ export const Block = memo(BlockComponent, (prevProps, nextProps) => {
     prevProps.block.isMoving === nextProps.block.isMoving &&
     prevProps.block.type === nextProps.block.type &&
     prevProps.isDropping === nextProps.isDropping &&
-    prevProps.themeId === nextProps.themeId
+    prevProps.themeId === nextProps.themeId &&
+    prevProps.shapeId === nextProps.shapeId
   );
 });
 
